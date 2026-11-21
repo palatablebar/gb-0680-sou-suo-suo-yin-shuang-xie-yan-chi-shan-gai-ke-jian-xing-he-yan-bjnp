@@ -30,6 +30,8 @@
 | TRAP-07 | 缺版本 | 当零处理 | 空值隔离 | `app/values.py` | `tests/test_m2.py::test_real_sentinel_isolated` |
 | TRAP-09 | 超大版本 | JSON精度损失 | 文本序列化 | `app/values.py` | `tests/test_m2.py::test_large_version_precise` |
 | TRAP-13 | 删除后迟到旧写 | 文档复活 | 最大版本墓碑 | `app/modules/m3_versions/rules.py` | `tests/test_m3.py::test_tombstone_beats_late_old_write` |
+| TRAP-27 | 仅凭墓碑签收撤下 | 墓碑同版本即关单，两侧正文曾不同也显示完成 | 还原两端撤下前正文逐字比对，唯一撤下结论号三态裁决，待证/不一致不放行 | `app/takedown.py`、`app/modules/m4_visibility/rules.py` | `tests/test_takedown_e2e.py` |
+| TRAP-28 | 撤下结论多份漂移 | 页面与导出各算一份、重跑新增记录 | 结论随输入确定性派生并随批次落库，页面与导出共用行内结论号，同源重跑复用批次 | `app/takedown.py`、`app/archive.py`、`app/store.py` | `tests/test_takedown_e2e.py::test_rerun_keeps_conclusion_and_adds_no_record` |
 | TRAP-23 | 延迟阈值边界 | 多判延迟 | 等于阈值通过 | `app/modules/m5_latency/rules.py` | `tests/test_m5.py::test_threshold_equal_pass` |
 
 ## 对账规则

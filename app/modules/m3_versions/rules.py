@@ -16,5 +16,13 @@ def evaluate(rows,context):
         if (doc,side) in blocked:
             bad.extend(reject(e,"UNRESOLVED_VERSION","当前文档存在版本冲突") for e in events);continue
         winner=max(events,key=lambda e:number(e["version"]))
-        good.append({**winner,"_sources":[n for e in events for n in sources(e)],"superseded_versions":sorted([e["version"] for e in events if e is not winner],key=number),"tombstone":winner["op"]=="delete"})
+        record={**winner,"_sources":[n for e in events for n in sources(e)],"superseded_versions":sorted([e["version"] for e in events if e is not winner],key=number),"tombstone":winner["op"]=="delete"}
+        if record["tombstone"]:
+            # 撤下前最后一份可见正文：同端版本低于墓碑的最高 upsert；没有则无法还原
+            prior=max((e for e in events if e["op"]=="upsert" and number(e["version"])<number(winner["version"])),key=lambda e:number(e["version"]),default=None)
+            if prior is not None:
+                record.update(prior_document=prior.get("document"),prior_version=prior["version"],prior_sources=sources(prior))
+            else:
+                record.update(prior_document=None,prior_version=None,prior_sources=[])
+        good.append(record)
     return {"rows":good,"quarantine":bad,"metrics":{"states":len(good),"tombstones":sum(r["tombstone"] for r in good),"conflict_rows":len(bad)}}

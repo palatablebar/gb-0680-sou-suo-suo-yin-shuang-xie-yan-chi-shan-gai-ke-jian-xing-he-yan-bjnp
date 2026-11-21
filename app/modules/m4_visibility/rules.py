@@ -1,6 +1,7 @@
 from collections import defaultdict
 from app.reasons import sources
 from app.values import number
+from app import takedown
 import json
 def same_document(a,b):return json.dumps(a,sort_keys=True)==json.dumps(b,sort_keys=True)
 def evaluate(rows,context):
@@ -17,5 +18,6 @@ def evaluate(rows,context):
         elif source["op"]=="upsert" and not same_document(source.get("document"),target.get("document")):state="CONTENT_MISMATCH"
         else:state="CONSISTENT"
         anchor=source or target
-        out.append({**anchor,"_sources":lines,"source_version":source["version"] if source else "—","index_version":target["version"] if target else "—","source_op":source["op"] if source else "—","index_op":target["op"] if target else "—","visible_at":target.get("visible_at") if target else None,"visibility_state":state,"expected":"1","reported":"1" if state=="CONSISTENT" else "0","document_equal":state=="CONSISTENT"})
-    return {"rows":out,"quarantine":[],"metrics":{"documents":len(out),"consistent":sum(r["visibility_state"]=="CONSISTENT" for r in out),"missing":sum(r["visibility_state"] in {"MISSING_INDEX","DELETE_NOT_CONFIRMED"} for r in out)}}
+        verdict=takedown.adjudicate(doc,source,target)
+        out.append({**anchor,"_sources":lines,"source_version":source["version"] if source else "—","index_version":target["version"] if target else "—","source_op":source["op"] if source else "—","index_op":target["op"] if target else "—","visible_at":target.get("visible_at") if target else None,"visibility_state":state,"expected":"1","reported":"1" if state=="CONSISTENT" else "0","document_equal":state=="CONSISTENT",**verdict})
+    return {"rows":out,"quarantine":[],"metrics":{"documents":len(out),"consistent":sum(r["visibility_state"]=="CONSISTENT" for r in out),"missing":sum(r["visibility_state"] in {"MISSING_INDEX","DELETE_NOT_CONFIRMED"} for r in out),"takedown_total":sum(r["takedown_state"] in takedown.TAKEDOWN_STATES for r in out),"takedown_proven":sum(r["takedown_state"]==takedown.PROVEN for r in out),"takedown_unproven":sum(r["takedown_state"]==takedown.UNPROVEN for r in out),"takedown_body_mismatch":sum(r["takedown_state"]==takedown.BODY_MISMATCH for r in out)}}
